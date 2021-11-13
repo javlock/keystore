@@ -47,7 +47,7 @@ public class KeyUtils {
 	private static final String KEYSTORETYPE = "PKCS12";
 	private static final String ENTRYNAME = "owlstead";
 	private static final String RSA = "RSA";
-	private static final int KEYLEN = 2048;
+	private static final int KEYLEN = 4096;
 	private static final String SIGNATUREALGORITHM = "SHA256WithRSA";
 	static BouncyCastleProvider provider;
 
@@ -60,7 +60,7 @@ public class KeyUtils {
 			NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
 		// Get Cipher Instance RSA With ECB Mode and OAEPWITHSHA-512ANDMGF1PADDING
 		// Padding
-		Cipher cipher = Cipher.getInstance(RSA_ECB_OAEPWITHSHA_512ANDMGF1PADDING);
+		Cipher cipher = Cipher.getInstance(RSA_ECB_OAEPWITHSHA_512ANDMGF1PADDING, provider);
 
 		// Initialize Cipher for DECRYPT_MODE
 		cipher.init(Cipher.DECRYPT_MODE, privKey);
@@ -74,7 +74,7 @@ public class KeyUtils {
 
 		// Get Cipher Instance RSA With ECB Mode and OAEPWITHSHA-512ANDMGF1PADDING
 		// Padding
-		Cipher cipher = Cipher.getInstance(RSA_ECB_OAEPWITHSHA_512ANDMGF1PADDING);
+		Cipher cipher = Cipher.getInstance(RSA_ECB_OAEPWITHSHA_512ANDMGF1PADDING, provider);
 
 		// Initialize Cipher for ENCRYPT_MODE
 		cipher.init(Cipher.ENCRYPT_MODE, pubKey);

@@ -15,11 +15,11 @@
 
 
 		<org.slf4j.version>2.0.0-alpha5</org.slf4j.version>
-		<lombok.version>1.18.20</lombok.version>
+		<lombok.version>1.18.22</lombok.version>
 		<jackson.version>2.13.0</jackson.version>
 
-		<spotbugs-annotations.version>4.4.2</spotbugs-annotations.version>
-		<spotbugs.version>4.4.2</spotbugs.version>
+		<spotbugs-annotations.version>4.5.0</spotbugs-annotations.version>
+		<spotbugs.version>4.5.0</spotbugs.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -31,7 +31,7 @@
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcpkix-jdk15on</artifactId>
-			<version>1.58</version>
+			<version>1.69</version>
 		</dependency>
 		<!-- LOGS -->
 		<dependency>
