@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyStore;
@@ -13,8 +14,6 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
-import java.security.interfaces.RSAPrivateKey;
-import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
 
 import javax.crypto.BadPaddingException;
@@ -30,6 +29,8 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey;
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
 import org.bouncycastle.operator.OperatorCreationException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,9 +55,8 @@ public class KeystoreMain extends JFrame {
 	private JTextField tfFilePath;
 	private JTextArea textArea;
 
-	private RSAPublicKey pubKey;
-
-	private RSAPrivateKey privKey;
+	private BCECPublicKey pubKey;
+	private BCECPrivateKey privKey;
 
 	public KeystoreMain() {
 		setSize(450, 300);
@@ -105,28 +105,7 @@ public class KeystoreMain extends JFrame {
 
 		textArea = new JTextArea();
 		scrollPane.setViewportView(textArea);
-		try {
 
-			// input
-			char[] password = "test".toCharArray();
-			KeyStore.ProtectionParameter param = new KeyStore.PasswordProtection(password);
-
-			// gen
-			KeyPair generatedKeyPair = KeyUtils.generateKeyPair();
-			RSAPublicKey pubKey = (RSAPublicKey) generatedKeyPair.getPublic();
-
-			// STORE
-			byte[] storedKey = KeyUtils.storeToString(generatedKeyPair, param, password);
-			// RESTORE
-			KeyPair restoredKeyPair = KeyUtils.restoreFromString(storedKey, password);
-			RSAPrivateKey restoredPrivKey = (RSAPrivateKey) restoredKeyPair.getPrivate();
-
-			// valid
-			System.out.println(pubKey.getModulus().equals(restoredPrivKey.getModulus()));
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 	}
 
 	private void chooseFile() throws IOException {
@@ -167,16 +146,16 @@ public class KeystoreMain extends JFrame {
 			data = OBJECTMAPPER.readValue(inputYAML, KeystoreData.class);
 
 			KeyPair keyPair = KeyUtils.restoreFromString(data.getKeystore(), passwd);
-			privKey = (RSAPrivateKey) keyPair.getPrivate();
-			pubKey = (RSAPublicKey) keyPair.getPublic();
+			privKey = (BCECPrivateKey) keyPair.getPrivate();
+			pubKey = (BCECPublicKey) keyPair.getPublic();
 
 			byte[] dataAr = KeyUtils.decrypt(data.getSecrets(), privKey);
 			String dataDecr = new String(dataAr, StandardCharsets.UTF_8);
 
 			textArea.setText(dataDecr);
 		} catch (NoSuchAlgorithmException | UnrecoverableEntryException | KeyStoreException | CertificateException
-				| IOException | InvalidKeyException | NoSuchPaddingException | IllegalBlockSizeException
-				| BadPaddingException e) {
+				| IOException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException
+				| InvalidAlgorithmParameterException e) {
 			e.printStackTrace();
 		}
 	}
@@ -199,8 +178,8 @@ public class KeystoreMain extends JFrame {
 
 			if (data.getKeystore() == null) {
 				KeyPair generatedKeyPair = KeyUtils.generateKeyPair();
-				privKey = (RSAPrivateKey) generatedKeyPair.getPrivate();
-				pubKey = (RSAPublicKey) generatedKeyPair.getPublic();
+				privKey = (BCECPrivateKey) generatedKeyPair.getPrivate();
+				pubKey = (BCECPublicKey) generatedKeyPair.getPublic();
 				byte[] storedKey = KeyUtils.storeToString(generatedKeyPair, param, passw);
 				data.setKeystore(storedKey);
 			}
@@ -220,7 +199,7 @@ public class KeystoreMain extends JFrame {
 			System.out.println("KeystoreMain.encryptData(3)");
 		} catch (IOException | OperatorCreationException | CertificateException | KeyStoreException
 				| NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | IllegalBlockSizeException
-				| BadPaddingException e) {
+				| BadPaddingException | InvalidAlgorithmParameterException e) {
 			e.printStackTrace();
 		}
 	}

@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -17,13 +18,11 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.SecureRandom;
 import java.security.Security;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
-import java.security.interfaces.RSAPrivateKey;
-import java.security.interfaces.RSAPublicKey;
+import java.security.spec.ECGenParameterSpec;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -37,44 +36,55 @@ import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey;
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
 public class KeyUtils {
-	private static final String RSA_ECB_OAEPWITHSHA_512ANDMGF1PADDING = "RSA/ECB/OAEPWITHSHA-512ANDMGF1PADDING";
+	private static final String ECIE_SWITH_AES_CBC = "ECIESwithAES-CBC";
+	// private static final String RSA_ECB_OAEPWITHSHA_512ANDMGF1PADDING =
+	// "RSA/ECB/OAEPWITHSHA-512ANDMGF1PADDING";
 	private static final String KEYSTORETYPE = "PKCS12";
 	private static final String ENTRYNAME = "owlstead";
-	private static final String RSA = "RSA";
-	private static final int KEYLEN = 4096;
-	private static final String SIGNATUREALGORITHM = "SHA256WithRSA";
+	private static final String EC = "EC";
+	private static final String SIGNATUREALGORITHM = "SHA256withECDSA";
 	static BouncyCastleProvider provider;
+	private static Cipher iesDecipher;
+	private static Cipher iesCipher;
 
 	static {
-		provider = new org.bouncycastle.jce.provider.BouncyCastleProvider();
-		Security.addProvider(provider);
+		try {
+			provider = new org.bouncycastle.jce.provider.BouncyCastleProvider();
+			Security.addProvider(provider);
+			iesCipher = Cipher.getInstance(ECIE_SWITH_AES_CBC, provider);
+			iesDecipher = Cipher.getInstance(ECIE_SWITH_AES_CBC, provider);
+		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
+			e.printStackTrace();
+		}
+
 	}
 
-	public static byte[] decrypt(byte[] dataE, RSAPrivateKey privKey) throws InvalidKeyException,
-			NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+	public static byte[] decrypt(byte[] dataE, BCECPrivateKey privKey) throws InvalidKeyException,
+			IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
 		// Get Cipher Instance RSA With ECB Mode and OAEPWITHSHA-512ANDMGF1PADDING
 		// Padding
-		Cipher cipher = Cipher.getInstance(RSA_ECB_OAEPWITHSHA_512ANDMGF1PADDING, provider);
 
 		// Initialize Cipher for DECRYPT_MODE
-		cipher.init(Cipher.DECRYPT_MODE, privKey);
+		iesDecipher.init(Cipher.DECRYPT_MODE, privKey, iesCipher.getParameters());
 
 		// Perform Decryption
-		return cipher.doFinal(dataE);
+		return iesDecipher.doFinal(dataE);
 	}
 
-	public static byte[] encrypt(String data, RSAPublicKey pubKey) throws NoSuchAlgorithmException,
+	public static byte[] encrypt(String data, BCECPublicKey pubKey) throws NoSuchAlgorithmException,
 			NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
 
 		// Get Cipher Instance RSA With ECB Mode and OAEPWITHSHA-512ANDMGF1PADDING
 		// Padding
-		Cipher cipher = Cipher.getInstance(RSA_ECB_OAEPWITHSHA_512ANDMGF1PADDING, provider);
+		Cipher cipher = Cipher.getInstance(ECIE_SWITH_AES_CBC, provider);
 
 		// Initialize Cipher for ENCRYPT_MODE
 		cipher.init(Cipher.ENCRYPT_MODE, pubKey);
@@ -83,9 +93,9 @@ public class KeyUtils {
 		return cipher.doFinal(data.getBytes(StandardCharsets.UTF_8));
 	}
 
-	public static KeyPair generateKeyPair() throws NoSuchAlgorithmException {
-		KeyPairGenerator generator = KeyPairGenerator.getInstance(RSA);
-		generator.initialize(KEYLEN, new SecureRandom());
+	public static KeyPair generateKeyPair() throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+		KeyPairGenerator generator = KeyPairGenerator.getInstance(EC, provider);
+		generator.initialize(new ECGenParameterSpec("secp256r1"));
 		return generator.generateKeyPair();
 	}
 
@@ -132,8 +142,9 @@ public class KeyUtils {
 		X509v3CertificateBuilder certificateBuilder = new X509v3CertificateBuilder(dnName, certSerialNumber, startDate,
 				endDate, dnName, subjectPublicKeyInfo);
 
-		ContentSigner contentSigner = new JcaContentSignerBuilder(SIGNATUREALGORITHM).setProvider(provider)
-				.build(keyPair.getPrivate());
+		BCECPrivateKey priv = (BCECPrivateKey) keyPair.getPrivate();
+
+		ContentSigner contentSigner = new JcaContentSignerBuilder(SIGNATUREALGORITHM).setProvider(provider).build(priv);
 
 		X509CertificateHolder certificateHolder = certificateBuilder.build(contentSigner);
 
